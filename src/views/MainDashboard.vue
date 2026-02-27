@@ -84,6 +84,8 @@ const handleSendMessage = async (text) => {
     timestamp: new Date()
   });
   isLoading.value = true;
+  if (activeView.value === 'result') isResultThinking.value = true;
+
   try {
     const aiResponse = await sendMessage(kernelSession.value, text);
     messages.value.push({
@@ -92,6 +94,12 @@ const handleSendMessage = async (text) => {
       content: aiResponse,
       timestamp: new Date()
     });
+    
+    // Update Result Screen if active
+    if (activeView.value === 'result') {
+      resultContent.value = aiResponse;
+      isResultThinking.value = false;
+    }
   } catch (error) {
     console.error('AI Error:', error);
   } finally {
@@ -100,9 +108,12 @@ const handleSendMessage = async (text) => {
 };
 
 // Voice logic
+const { stopAll } = useAmasAudio();
+
 const handleToggleVoice = async () => {
     if (isListening.value) {
         isProcessingVoice.value = true;
+        stopAll(); // Immediate stop of any playing response
         notify('Processing', 'Analyzing voice...', 'info');
         
         const transcript = await stopRecording();
@@ -202,6 +213,11 @@ const handleManualDiaryEntry = (content) => {
         @close="activeView = 'dashboard'"
         @save="activeView = 'notebook'"
         @oke="activeView = 'dashboard'"
+        @submit="(data) => { 
+          isResultThinking = true; 
+          resultContent = ''; 
+          handleSendMessage(data.prompt); 
+        }"
       />
 
     </main>

@@ -39,13 +39,19 @@ onUnmounted(() => cancelAnimationFrame(animationFrame));
       <div class="mist layer-2"></div>
       
       <!-- Dynamic Oscillating Bars (The "Movement") -->
-      <div v-if="isListening" class="visualizer-bars">
+      <div v-if="isListening" class="visualizer-bars relative">
           <div 
             v-for="(bar, i) in bars" 
             :key="i" 
             class="v-bar" 
             :style="{ height: bar.h + 'px' }"
           ></div>
+          <!-- Stop Indicator (Square) -->
+          <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div class="stop-indicator w-6 h-6 backdrop-blur-md rounded-lg flex items-center justify-center">
+                  <div class="stop-square w-2 h-2 rounded-sm"></div>
+              </div>
+          </div>
       </div>
 
       <!-- Tive Center Dot -->
@@ -84,8 +90,9 @@ onUnmounted(() => cancelAnimationFrame(animationFrame));
 }
 
 .light-mode .outer-ring {
-    border-color: rgba(0, 0, 0, 0.6);
-    box-shadow: 0 0 40px rgba(0, 0, 0, 0.1);
+    border-color: rgba(0, 0, 0, 0.8);
+    box-shadow: 0 0 40px rgba(0, 0, 0, 0.2);
+    opacity: 0.9;
 }
 
 .orb-core {
@@ -99,11 +106,13 @@ onUnmounted(() => cancelAnimationFrame(animationFrame));
   align-items: center;
   justify-content: center;
   border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.5s ease;
 }
 
 .light-mode .orb-core {
-    background: radial-gradient(circle at 50% 50%, #ffffff 0%, #f0f0f0 100%);
-    border-color: rgba(0, 0, 0, 0.05);
+    background: #ffffff;
+    border-color: rgba(0, 0, 0, 0.1);
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.05);
 }
 
 .visualizer-bars {
@@ -122,9 +131,20 @@ onUnmounted(() => cancelAnimationFrame(animationFrame));
 }
 
 .light-mode .v-bar {
-    background: black;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+    background: #111;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
 }
+
+.stop-indicator {
+    background: rgba(255,255,255,0.2);
+    border: 1px solid rgba(255,255,255,0.2);
+}
+.light-mode .stop-indicator {
+    background: rgba(0,0,0,0.1);
+    border-color: rgba(0,0,0,0.1);
+}
+.stop-square { background: white; }
+.light-mode .stop-square { background: black; }
 
 .tive-dot {
   width: 12px;
@@ -150,7 +170,8 @@ onUnmounted(() => cancelAnimationFrame(animationFrame));
 }
 
 .light-mode .mist {
-    background: radial-gradient(circle at center, rgba(0, 0, 0, 0.05) 0%, transparent 70%);
+    background: radial-gradient(circle at center, rgba(0, 0, 0, 0.1) 0%, transparent 70%);
+    opacity: 0.4;
 }
 
 .layer-1 { animation: mist-float 15s infinite linear; }
@@ -185,7 +206,7 @@ onUnmounted(() => cancelAnimationFrame(animationFrame));
   animation: wave-spread 3s infinite linear;
 }
 
-.light-mode .wave { border-color: rgba(0, 0, 0, 0.1); }
+.light-mode .wave { border-color: rgba(0, 0, 0, 0.4); border-width: 2px; }
 
 @keyframes wave-spread {
   0% { transform: scale(0.8); opacity: 0.8; }

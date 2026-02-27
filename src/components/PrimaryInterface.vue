@@ -1,8 +1,8 @@
 <script setup>
 import { ref, watch, onMounted, onUnmounted } from 'vue';
-import { Settings, Play, Sun, Moon, Compass, Map, Book, X } from 'lucide-vue-next';
+import { Settings, Play, Sun, Moon, Map, Book, X, CircleDot } from 'lucide-vue-next';
 import Orb from './Orb.vue';
-import { i18n, theme, toggleTheme } from '../services/i18n';
+import { i18n, theme, toggleTheme, activeModel, setModel } from '../services/i18n';
 
 const props = defineProps({
   user: Object,
@@ -51,6 +51,10 @@ watch(() => props.isListening, (newVal) => {
       </div>
       
       <div class="nav-icons">
+        <button class="status-indicator" @click="$emit('viewMemos')">
+            <Book :size="14" class="mr-1" />
+            <span>Notebook</span>
+        </button>
         <button class="icon-btn" @click="toggleTheme" :title="i18n.t('appearance')">
             <component :is="theme === 'dark' ? Sun : Moon" :size="20" />
         </button>
@@ -69,6 +73,15 @@ watch(() => props.isListening, (newVal) => {
                     <div class="grid grid-cols-4 gap-2">
                         <button v-for="l in ['en', 'ja', 'es', 'fr', 'de', 'zh', 'ko', 'it', 'pt', 'ru', 'ar', 'hi']" :key="l" @click="i18n.setLocale(l)" :class="['px-2 py-1.5 rounded-lg text-[8px] uppercase font-bold transition-all', i18n.locale === l ? 'bg-indigo-500 text-white shadow-lg' : 'bg-white/5 hover:bg-white/10']">
                             {{ l === 'ko' ? 'KR' : l }}
+                        </button>
+                    </div>
+                </div>
+
+                <div>
+                    <p class="text-[10px] uppercase tracking-widest opacity-40 mb-3">{{ i18n.t('modelChoice') }}</p>
+                    <div class="flex gap-2">
+                        <button v-for="m in ['Gemini', 'Claude', 'ChatGPT']" :key="m" @click="setModel(m)" :class="['flex-1 py-1.5 rounded-lg text-[8px] uppercase font-bold transition-all', activeModel === m ? 'bg-indigo-500 text-white shadow-lg' : 'bg-white/5 hover:bg-white/10']">
+                            {{ m }}
                         </button>
                     </div>
                 </div>
@@ -98,7 +111,7 @@ watch(() => props.isListening, (newVal) => {
 
         <nav class="bridge-nav">
             <button @click="$emit('viewDiscovery')" class="bridge-link">
-                <Compass :size="14" />
+                <CircleDot :size="14" />
                 <span>{{ i18n.t('discovery') }}</span>
             </button>
             <button @click="$emit('viewAiMap')" class="bridge-link">
@@ -107,7 +120,7 @@ watch(() => props.isListening, (newVal) => {
             </button>
             <button @click="$emit('viewMemos')" class="bridge-link">
                 <Book :size="14" />
-                <span>{{ i18n.t('notebook') }}</span>
+                <span>{{ i18n.t('memo') }}</span>
             </button>
         </nav>
     </main>
@@ -118,7 +131,7 @@ watch(() => props.isListening, (newVal) => {
                 v-model="textInputValue"
                 @keydown.enter="handleTextSubmit"
                 type="text" 
-                :placeholder="i18n.t('ask')"
+                :placeholder="i18n.t('askModel').replace('{model}', activeModel)"
                 />
                 <button @click="handleTextSubmit" class="send-btn">
                 <Play :size="16" fill="currentColor" class="translate-x-0.5" />
@@ -153,6 +166,28 @@ watch(() => props.isListening, (newVal) => {
 
 .icon-btn { background: none; border: none; color: inherit; cursor: pointer; transition: transform 0.2s; }
 .icon-btn:hover { transform: scale(1.1); }
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 9px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: inherit;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.light-mode .status-indicator {
+    background: rgba(0,0,0,0.05);
+    border-color: rgba(0,0,0,0.1);
+}
+.status-indicator:hover { background: rgba(255,255,255,0.1); }
+.light-mode .status-indicator:hover { background: rgba(0,0,0,0.1); }
 
 .tive-main { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; max-width: 800px; text-align: center; }
 .hero-section { margin-bottom: 40px; }

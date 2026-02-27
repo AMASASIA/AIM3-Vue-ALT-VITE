@@ -1,10 +1,44 @@
 import { reactive, ref } from 'vue';
 
 const translations = {
-    en: { title: "Ask Me Anythings", ask: "Ask Tive◎AI anything", discovery: "AI Discovery", map: "AI Map", notebook: "Notebook", thinking: "Thinking..", history: "Back", settings: "Settings", language: "Language", appearance: "Appearance", cognitive: "Synchronizing Cognitive Assets" },
-    ja: { title: "Ask Me Anythings", ask: "Tive◎AIに質問してみましょう", discovery: "AI発見", map: "AIマップ", notebook: "ノートブック", thinking: "思考中..", history: "戻る", settings: "設定", language: "言語", appearance: "外観", cognitive: "認知資産を同期中" },
-    es: { title: "Ask Me Anythings", ask: "Pregunta cualquier cosa a Tive◎AI", discovery: "Descubrimiento AI", map: "Mapa AI", notebook: "Cuaderno", thinking: "Pensando..", history: "Volver", settings: "Ajustes", language: "Idioma", appearance: "Apariencia", cognitive: "Sincronizando activos cognitivos" },
-    // Simplified, keeping it consistent for now
+    en: { 
+        title: "Ask Me Anythings", 
+        ask: "Tap the Tive to start a communicate. I can discovery the web, find places, or save your Memos and Notebook.", 
+        askModel: "Ask {model} anything",
+        discovery: "Discovery", 
+        map: "AI Map", 
+        memo: "Memo",
+        notebook: "Notebook", 
+        thinking: "Thinking..", 
+        history: "Back", 
+        settings: "Settings", 
+        language: "Language", 
+        appearance: "Appearance", 
+        modelChoice: "AI Model",
+        cognitive: "Synchronizing Cognitive Assets" 
+    },
+    ja: { 
+        title: "Ask Me Anythings", 
+        ask: "Tiveをタップして会話を始めましょう。ウェブの探索、場所の検索、メモやノートブックの保存が可能です。", 
+        askModel: "{model}に質問してみましょう",
+        discovery: "Discovery", 
+        map: "AIマップ", 
+        memo: "メモ",
+        notebook: "ノートブック", 
+        thinking: "思考中..", 
+        history: "戻る", 
+        settings: "設定", 
+        language: "言語", 
+        appearance: "外観", 
+        modelChoice: "AIモデル",
+        cognitive: "認知資産を同期中" 
+    }
+};
+
+export const activeModel = ref(localStorage.getItem('tive_model') || 'Gemini');
+export const setModel = (m) => {
+    activeModel.value = m;
+    localStorage.setItem('tive_model', m);
 };
 
 export const i18n = reactive({
