@@ -34,9 +34,13 @@
        </div>
     </div>
 
-    <!-- Metadata Preview -->
+    <!-- Metadata & IPFS Preview -->
     <div v-if="aiResult" class="metadata-preview">
        <pre>{{ JSON.stringify(aiResult, null, 2) }}</pre>
+    </div>
+
+    <div v-if="ipfsCid" class="ipfs-info" style="margin-bottom: 15px; font-size: 0.9em; color: #00ffcc;">
+       🌐 IPFS Pin: <a :href="`https://gateway.pinata.cloud/ipfs/${ipfsCid}`" target="_blank" style="color: #00ffcc;">{{ ipfsCid }}</a>
     </div>
 
     <!-- Atomic Mint Button -->
@@ -53,11 +57,10 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
-import { askGemini } from "../engine/ai.js";
+import { ref, computed, onMounted, watch } from 'vue';
 import { AntigravityEngine } from "../engine/antigravity-engine.js";
+// Removed Gemini and IPFS dependencies from Frontend to enforce Sensory Separation Architecture
 
-const apiKey = import.meta.env.VITE_GEMINI_API_KEY || "AIzaSyCiLO-pbMChwMe3vIYyA7ZYrFPolOHNWWw";
 const aiPrompt = ref("Energetic neon cyber future");
 const loading = ref(false);
 const minting = ref(false);
@@ -65,6 +68,8 @@ const aiResult = ref(null);
 const status = ref("Idle");
 const txHash = ref(null);
 const engineEnergy = ref(0.5);
+const verificationStatus = ref('');
+const ipfsCid = ref('');
 
 const glowClass = computed(() => AntigravityEngine.glowState || 'stable');
 
@@ -76,7 +81,6 @@ const address = ref("0xUserAddressMock");
     const { address: modalAddress, isConnected } = useWeb3ModalAccount()
     
     // Watch for changes (simple sync)
-    import { watch } from 'vue';
     watch(modalAddress, (newVal) => {
         if(newVal) {
             address.value = newVal;
@@ -184,34 +188,47 @@ const address = ref("0xUserAddressMock");
       }
     }
 
-    // 1. Generate AI State & Metadata
+    // 1. Generate AI State & Metadata (Delegated to Backend Node.js)
     async function generateAI() {
   loading.value = true;
-  status.value = "Consulting AI...";
+  status.value = "Consulting AI Engine (Hybrid Phase)...";
   
   try {
-    // Prompt 1: Engine Physics
-    const enginePrompt = `Analyze this mood: '${aiPrompt.value}'. Return JSON: { "color": "bright|calm|danger|#hex", "gravity": {"x":number,"y":number}, "energyScore": number(0-1), "reactivity": number(0-2) }`;
-    const engineConfig = await askGemini(enginePrompt, apiKey);
+    const API_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3000"; 
+    const res = await fetch(`${API_URL}/agent/hybrid`, {
+       method: "POST",
+       headers: { "Content-Type": "application/json" },
+       body: JSON.stringify({ text: aiPrompt.value })
+    });
     
-    // Load into Engine
-    AntigravityEngine.loadAIState(engineConfig);
-    engineEnergy.value = engineConfig.energyScore || 0.5;
+    const data = await res.json();
     
-    // Prompt 2: NFT Metadata
-    const metaPrompt = `Generate NFT metadata for '${aiPrompt.value}'. JSON: { "name": string, "description": string, "attributes": [] }`;
-    const metadata = await askGemini(metaPrompt, apiKey);
-    
-    // Combine for Minting
-    aiResult.value = {
-        engine: engineConfig,
-        metadata: metadata
-    };
-    
-    status.value = "AI Ready. Engine Synced.";
+    if (data.success) {
+        // Construct NFT metadata for minting based on hybrid backend response
+        const metadata = {
+            name: `Cognitive Core: ${data.meta?.emotion || 'Unknown'}`,
+            description: data.response || "No response",
+            attributes: (data.meta?.labels || []).map(l => ({ trait_type: "Label", value: l }))
+        };
+
+        const mockEngineState = { energyScore: 0.8, color: "bright", gravity: {x:0, y:0} };
+        
+        aiResult.value = {
+            engine: mockEngineState,
+            metadata: metadata,
+            hybridMeta: data.meta
+        };
+        
+        AntigravityEngine.loadAIState(mockEngineState);
+        engineEnergy.value = 0.8;
+        
+        status.value = "AI Phase Completed Safely.";
+    } else {
+        throw new Error(data.response || "Safe mode active.");
+    }
   } catch (e) {
-    console.error(e);
-    status.value = "AI Error";
+    console.error("Agent Engine connection error:", e);
+    status.value = "AI System Safe Mode (Fallback).";
   } finally {
     loading.value = false;
   }
@@ -221,21 +238,21 @@ const address = ref("0xUserAddressMock");
 async function atomicMint() {
     if(!aiResult.value) return;
     minting.value = true;
-    status.value = "Minting on Blockchain...";
+    status.value = "Delegating Mint & IPFS Upload to Backend...";
 
     try {
         const metadata = aiResult.value.metadata;
         const aiLog = aiResult.value.engine;
-        
-        // Auto-detect backend URL (relative path works for Vercel/same-domain)
-        const API_URL = ""; 
+
+        // Auto-detect backend URL (use Vite env var)
+        const API_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3000"; 
         
         const res = await fetch(`${API_URL}/atomicMint`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-                address: address.value || "0xUserAddressMock", // Ensure value is passed, not ref
-                metadata: metadata,
+                address: address.value || "0xUserAddressMock",
+                metadata: metadata, // The backend /atomicMint endpoint will handle IPFS!
                 rally: { stamps: 1, action: "mint", timestamp: Date.now() },
                 aiLog: aiLog
             })

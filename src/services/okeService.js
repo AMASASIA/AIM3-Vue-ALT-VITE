@@ -92,29 +92,7 @@ export async function executeAtomicMint({ address, metadata, types, file, voiceT
             console.warn('[OKE Service] Backend API unavailable:', apiError.message);
         }
 
-        // Try direct on-chain mint
-        if (window.ethereum && address && address !== 'local-demo') {
-            try {
-                const metadataURI = `data:application/json;base64,${btoa(JSON.stringify(metadata))}`;
-                const result = await web3Service.executeAtomicMintOnChain({ metadataURI });
 
-                const cardData = {
-                    ...metadata,
-                    types,
-                    tx: result.transactionHash,
-                    sbtId: result.sbtId,
-                    nftId: result.nftId,
-                    tba: result.tba,
-                    mintedAt: new Date().toISOString()
-                };
-
-                await saveCardToFirebase(cardData);
-
-                return { ...cardData, success: true, source: 'on-chain' };
-            } catch (chainError) {
-                console.warn('[OKE Service] On-chain mint failed:', chainError.message);
-            }
-        }
 
         // Simulation fallback
         const mockTx = '0x' + Math.random().toString(16).slice(2, 10).toUpperCase();

@@ -60,29 +60,12 @@ export async function signMessageForAccess(artifactId) {
     return { message, signature, address, timestamp };
 }
 
-/**
- * 🔗 Execute Atomic Mint
- */
-export async function executeAtomicMintOnChain({ metadataURI, valueWei = '0' }) {
-    const { signer, address } = await connectWallet();
-    const contract = new Contract(ATOMIC_MINT_ADDRESS, ATOMIC_MINT_ABI, signer);
-    const tx = await contract.atomicMint(address, metadataURI, {
-        value: valueWei !== '0' ? parseEther(valueWei) : 0n
-    });
-    console.log(`[Web3] Atomic Mint TX sent: ${tx.hash}`);
-    const receipt = await tx.wait();
-    return {
-        success: true,
-        transactionHash: receipt.hash,
-        explorer: `https://sepolia.basescan.org/tx/${receipt.hash}`
-    };
-}
+
 
 export const web3Service = {
     connectWallet,
     checkSBTBalance,
-    signMessageForAccess,
-    executeAtomicMintOnChain
+    signMessageForAccess
 };
 
 export default web3Service;

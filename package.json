@@ -19,6 +19,7 @@
     "@tanstack/vue-query": "^5.92.9",
     "@waku/sdk": "^0.0.26",
     "@web3modal/ethers": "^5.1.11",
+    "axios": "^1.13.6",
     "circomlib": "^2.0.5",
     "circomlibjs": "^0.1.7",
     "ethers": "^6.16.0",
