@@ -54,6 +54,16 @@ export const AntigravityEngine = {
         this.reactivity = ai.reactivity !== undefined ? ai.reactivity : 1.0;
 
         this.glowState = this.energy > 0.8 ? 'reactive' : 'stable';
+
+        // Omotenashi (Hospitality) special effect
+        if (ai.type === 'omotenashi') {
+            console.log("[Engine] Entering Omotenashi State...");
+            this.particles.forEach(p => {
+                p.vx *= 0.2;
+                p.vy *= 0.2;
+                p.alpha = 0.8;
+            });
+        }
     },
 
     update() {

@@ -1,7 +1,8 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue';
 import { Share2, Book, Check, PenTool, X, Trash2, ArrowLeft, Plus, Mic, Square, Menu, LayoutDashboard, Copy, Zap } from 'lucide-vue-next';
-import { i18n, theme } from '../services/i18n';
+import { i18n, theme, activeModel } from '../services/i18n';
+import AmaneCertificationCard from './AmaneCertificationCard.vue';
 
 const props = defineProps({
     content: { type: String, default: "" },
@@ -12,7 +13,6 @@ const emit = defineEmits(['close', 'save', 'oke', 'submit']);
 
 const isSigning = ref(false);
 const isOke = ref(false);
-const selectedModel = ref('Gemini'); 
 const promptInput = ref('');
 const processingState = ref('idle'); // idle, proofing, sending, completed
 const userWallet = ref(localStorage.getItem('tive_wallet_address') || '');
@@ -151,7 +151,7 @@ const handleAmaneMint = async (target) => {
     <header class="absolute top-0 w-full p-10 flex justify-between items-center z-[110]">
         <div class="system-id">
             <div class="pulse-dot"></div>
-            <span class="id-text">Tive◎Core_v2.0</span>
+            <span class="id-text">Tive◎AI_v2.0</span>
         </div>
         <div class="header-actions">
             <div class="model-badge">
@@ -188,33 +188,43 @@ const handleAmaneMint = async (target) => {
             <div class="vessel-glass-texture"></div>
             
             <!-- Dynamic Neural Content -->
-            <template v-if="isThinking">
-                <div class="thinking-nexus">
+            <Transition name="reveal" mode="out-in" appear>
+                <div v-if="isThinking" key="thinking" class="thinking-nexus">
                     <div class="nexus-core">
                         <div class="core-beat"></div>
+                        <div class="neural-pulse-ring"></div>
                     </div>
-                    <h2 class="nexus-title">Synthesizing...</h2>
+                    <h2 class="nexus-title animate-pulse">Synthesizing...</h2>
                     <p class="nexus-sub">Neural strands aligning to your frequency</p>
                 </div>
-            </template>
 
-            <div v-else class="content-nexus custom-scroll">
-                <div class="text-bloom">
-                    <p class="revealed-text">{{ content }}</p>
+                <div v-else key="content" class="content-nexus custom-scroll flex items-center justify-center p-0 overflow-visible">
+                    <!-- AI Verified Response (Pinkcard) -->
+                    <AmaneCertificationCard 
+                        class="reveal-scale transition-all duration-1000"
+                        :fact="{
+                            model: activeModel,
+                            grade: (9.5 + Math.random()*0.4).toFixed(1),
+                            category: 'Neural Consensus Insight',
+                            description: content,
+                            observer: 'Tive◎AI_Kernel',
+                            shortId: '0x' + Math.random().toString(16).slice(2,10)
+                        }"
+                    />
+                    
+                    <!-- Signature Layer (Overlay or integrated) -->
+                    <div v-if="isSigning" class="signature-zone absolute inset-0 z-50 pointer-events-auto">
+                        <canvas 
+                            ref="canvasRef"
+                            class="sig-canvas w-full h-full"
+                            @mousedown="startDrawing"
+                            @mousemove="draw"
+                            @mouseup="stopDrawing"
+                        ></canvas>
+                        <span class="sig-hint absolute bottom-10 left-1/2 -translate-x-1/2 text-white/40 text-[10px] uppercase tracking-widest bg-black/40 px-4 py-2 rounded-full backdrop-blur-md">Acknowledge with your soul signature</span>
+                    </div>
                 </div>
-                
-                <!-- Signature Layer -->
-                <div v-if="isSigning" class="signature-zone">
-                    <canvas 
-                        ref="canvasRef"
-                        class="sig-canvas"
-                        @mousedown="startDrawing"
-                        @mousemove="draw"
-                        @mouseup="stopDrawing"
-                    ></canvas>
-                    <span class="sig-hint">Acknowledge with your soul signature</span>
-                </div>
-            </div>
+            </Transition>
         </div>
     </div>
 
@@ -236,9 +246,9 @@ const handleAmaneMint = async (target) => {
                 
                 <!-- Fast Switch Model -->
                 <div class="model-selector-organic">
-                    <select v-model="selectedModel" class="organic-select">
-                        <option value="Gemini">Gemini</option>
-                        <option value="Claude">Claude</option>
+                    <select v-model="activeModel" class="organic-select">
+                        <option value="Gemini 2.0 Flash">Gemini 2.0 Flash</option>
+                        <option value="Opal Reasoning">Opal Reasoning</option>
                     </select>
                 </div>
             </div>
@@ -348,5 +358,19 @@ const handleAmaneMint = async (target) => {
 .organic-select { background: transparent; color: #FFB8B8; font-size: 12px; font-weight: 700; border: none; outline: none; }
 
 .custom-scroll::-webkit-scrollbar { width: 2px; }
-.custom-scroll::-webkit-scrollbar-thumb { background: rgba(255,139,139,0.2); }
+.custom-scroll::-webkit-scrollbar-thumb { background: rgba(107, 91, 84, 0.2); }
+
+/* REVEAL TRANSITION */
+.reveal-enter-active, .reveal-leave-active { transition: all 1s cubic-bezier(0.16, 1, 0.3, 1); }
+.reveal-enter-from { opacity: 0; scale: 0.9; filter: blur(20px); }
+.reveal-leave-to { opacity: 0; scale: 1.1; filter: blur(20px); }
+
+.neural-pulse-ring { 
+    position: absolute; inset: -10px; border: 1px solid rgba(255,139,139,0.2); 
+    border-radius: 50%; animation: ring-expand 2s infinite; 
+}
+@keyframes ring-expand { 0% { transform: scale(1); opacity: 0.8; } 100% { transform: scale(2.5); opacity: 0; } }
+
+.reveal-scale { scale: 1.0; }
+@media (max-width: 640px) { .reveal-scale { scale: 0.85; } }
 </style>

@@ -10,6 +10,7 @@ export default defineConfig({
     host: '0.0.0.0', // Listen on all network interfaces
     allowedHosts: true, // Allow connections from any host
     proxy: {
+      '/api': 'http://localhost:3000',
       '/agent': 'http://localhost:3000',
       '/analyze-scene': 'http://localhost:3000',
       '/execute-agentic-purchase': 'http://localhost:3000',

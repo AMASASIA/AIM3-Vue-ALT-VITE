@@ -1,9 +1,9 @@
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { Sparkles, Mic, Zap, Terminal, X, CheckCircle } from 'lucide-vue-next';
 import { useWebMCP } from '../composables/useWebMCP';
-
 import { useWebRTC } from '../composables/useWebRTC';
+import { useAmasAudioRecorder } from '../composables/useAmasAudioRecorder';
 import VideoCallPortal from './VideoCallPortal.vue';
 
 const { registerTool, executeTool, getToolDefinitions } = useWebMCP();
@@ -46,8 +46,7 @@ onMounted(() => {
   }, async (args) => {
     status.value = 'Minting to On-Chain...';
     try {
-        const API_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3000";
-        const res = await fetch(`${API_URL}/api/oke/mint-fact`, {
+        const res = await fetch(`/api/oke/mint-fact`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -104,28 +103,38 @@ const toggleAgent = () => {
   if (!isActive.value) isListening.value = false;
 };
 
-const startListening = () => {
+const { startRecording, stopRecording, isRecording: recorderIsRecording } = useAmasAudioRecorder();
+
+const startListening = async () => {
+  isActive.value = true;
   isListening.value = true;
   status.value = 'Listening...';
   
-  // 擬似的な音声認識
-  setTimeout(() => {
-    // ユーザーの声をシミュレート
-    const voiceInput = Math.random() > 0.5 
-      ? "Aliceと繋いで" 
-      : "来週の月曜日に『AI会議』をカレンダーに入れて";
-    simulateAIProcess(voiceInput);
-  }, 2000);
+  try {
+    await startRecording();
+    // Wait for manual stop or auto-stop (silence/timeout)
+  } catch (e) {
+    addLog('Mic Access Denied', 'error');
+    isListening.value = false;
+  }
 };
+
+// Auto-stop monitor
+watch(recorderIsRecording, async (newVal) => {
+    if (!newVal && isListening.value) {
+        const transcript = await stopRecording();
+        if (transcript) simulateAIProcess(transcript);
+        else isListening.value = false;
+    }
+});
 
 const simulateAIProcess = async (text) => {
   transcript.value = text;
-  status.value = 'Tive Orchestrating...';
+  status.value = 'Tive◎AI Orchestrating...';
   addLog(`Input: "${text}"`, 'ai');
   
   try {
-    const API_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3000";
-    const res = await fetch(`${API_URL}/agent`, {
+    const res = await fetch(`/agent`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -139,11 +148,6 @@ const simulateAIProcess = async (text) => {
     if (data.status === 'success') {
         const response = data.response;
         
-        // Handle potential tool calls encoded in the response or meta
-        // For this implementation, we assume the backend might return a structured response
-        // if it needs to trigger a tool. 
-        // Logic: Search for keywords if the backend hasn't moved to full tool-use protocol yet.
-        
         if (text.includes('繋いで') || text.includes('call') || response.includes('call')) {
           addLog(`Action: Initiating Video Call`, 'call');
           await executeTool('start_call', { target: 'Alice' });
@@ -156,7 +160,7 @@ const simulateAIProcess = async (text) => {
           });
         }
         
-        addLog(`Tive: ${response.substring(0, 40)}...`, 'ai');
+        addLog(`Tive◎AI: ${response.substring(0, 40)}...`, 'ai');
         status.value = 'Task Handled';
     }
   } catch (e) {
@@ -184,6 +188,9 @@ defineExpose({
           <div class="flex items-center gap-2">
             <span class="text-[8px] font-mono text-slate-400 tracking-widest uppercase">{{ status }}</span>
           </div>
+          <button @click="isActive = false" class="text-slate-500 hover:text-white transition-colors">
+            <X :size="14" />
+          </button>
         </div>
         
         <div class="p-4 space-y-3 min-h-[200px] max-h-[300px] overflow-y-auto custom-scroll">
@@ -206,7 +213,6 @@ defineExpose({
         </div>
       </div>
     </Transition>
-
     <!-- Video Call UI -->
     <VideoCallPortal 
       :isCalling="isCalling"

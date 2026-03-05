@@ -7,52 +7,24 @@
         },
         {
             "src": "package.json",
-            "use": "@vercel/static-build"
+            "use": "@vercel/static-build",
+            "config": {
+                "distDir": "dist"
+            }
         }
     ],
     "rewrites": [
         {
-            "source": "/api/(.*)",
+            "source": "/(api|atomicMint|agent|consensus|opal|deployment|f)/(.*)",
             "destination": "/backend/server.js"
         },
         {
-            "source": "/atomicMint(.*)",
-            "destination": "/backend/server.js"
-        },
-        {
-            "source": "/execute-agentic-purchase(.*)",
-            "destination": "/backend/server.js"
-        },
-        {
-            "source": "/analyze-scene(.*)",
-            "destination": "/backend/server.js"
-        },
-        {
-            "source": "/agent(.*)",
-            "destination": "/backend/server.js"
-        },
-        {
-            "source": "/amane-l0(.*)",
-            "destination": "/backend/server.js"
-        },
-        {
-            "source": "/consensus(.*)",
-            "destination": "/backend/server.js"
-        },
-        {
-            "source": "/deployment(.*)",
-            "destination": "/backend/server.js"
-        },
-        {
-            "source": "/f(.*)",
-            "destination": "/backend/server.js"
-        },
-        {
-            "source": "/((?!api|dist|static|assets).*)$",
-            "destination": "/dist/index.html"
+            "source": "/((?!assets|static|favicon.ico).*)",
+            "destination": "/index.html"
         }
     ],
     "env": {
-        "NODE_ENV": "production"
+        "NODE_ENV": "production",
+        "PYTHON_CORE_URL": "SERVERLESS_ACTIVE"
     }
 }

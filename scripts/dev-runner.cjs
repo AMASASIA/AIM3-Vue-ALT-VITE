@@ -37,8 +37,11 @@ function startProcess(name, command, args, cwd) {
     return proc;
 }
 
-console.log(`${colors.backend}Starting Backend...${colors.reset}`);
+console.log(`${colors.backend}Starting Backend (Express)...${colors.reset}`);
 const backend = startProcess('Backend', 'npm', ['run', 'server'], path.resolve(__dirname, '..'));
+
+console.log(`${colors.backend}Starting Hyper Core (Python)...${colors.reset}`);
+const pythonCore = startProcess('HyperCore', 'python', ['-m', 'uvicorn', 'main:app', '--host', '0.0.0.0', '--port', '8000'], path.resolve(__dirname, '..'));
 
 console.log(`${colors.frontend}Starting Frontend (Vite)...${colors.reset}`);
 const frontend = startProcess('Frontend', 'npm', ['run', 'dev'], path.resolve(__dirname, '..'));
@@ -47,6 +50,7 @@ const frontend = startProcess('Frontend', 'npm', ['run', 'dev'], path.resolve(__
 process.on('SIGINT', () => {
     console.log('\nStopping processes...');
     backend.kill();
+    pythonCore.kill();
     frontend.kill();
     process.exit();
 });

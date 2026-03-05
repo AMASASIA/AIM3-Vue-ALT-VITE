@@ -38,9 +38,29 @@ app.use('/consensus', require('./api/consensus'));
 
 app.use('/opal', require('./api/opal_gateway'));
 app.use('/deployment', require('./api/deployment_gateway'));
+app.get('/system-health', (req, res) => {
+  const os = require('os');
+  const nodeMem = process.memoryUsage();
+  res.json({
+    timestamp: new Date().toISOString(),
+    os: {
+      totalMem: (os.totalmem() / 1024 / 1024 / 1024).toFixed(2) + ' GB',
+      freeMem: (os.freemem() / 1024 / 1024 / 1024).toFixed(2) + ' GB',
+      usage: ((1 - os.freemem() / os.totalmem()) * 100).toFixed(2) + '%'
+    },
+    node: {
+      rss: (nodeMem.rss / 1024 / 1024).toFixed(2) + ' MB',
+      heapUsed: (nodeMem.heapUsed / 1024 / 1024).toFixed(2) + ' MB',
+      heapTotal: (nodeMem.heapTotal / 1024 / 1024).toFixed(2) + ' MB'
+    }
+  });
+});
+
+const PYTHON_CORE_URL = process.env.PYTHON_CORE_URL || 'http://localhost:8000';
+
 app.get('/core-status', async (req, res) => {
   try {
-    const response = await fetch('http://localhost:8000/');
+    const response = await fetch(`${PYTHON_CORE_URL}/`);
     const data = await response.json();
     res.json(data);
   } catch (err) {

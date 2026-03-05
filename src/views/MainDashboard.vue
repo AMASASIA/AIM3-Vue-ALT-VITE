@@ -5,7 +5,7 @@
     
     <!-- 🌌 Persistent Sacred Engine Background -->
     <div class="engine-bg-container">
-        <div ref="bgCanvasRef" class="engine-bg-canvas"></div>
+        <canvas ref="bgCanvasRef" class="engine-bg-canvas"></canvas>
     </div>
 
     <main class="flex-1 relative overflow-hidden flex flex-col min-h-0">
@@ -18,6 +18,9 @@
         :lastAudioUrl="lastAudioUrl"
         @toggleVoice="handleToggleVoice"
         @viewMemos="activeView = 'notebook'"
+        @viewDiscovery="notify('Discovery', 'Searching the neural web...', 'success')"
+        @viewAiMap="notify('AI Map', 'Initializing semantic visualization...', 'success')"
+        @notify="(n) => notify(n.title, n.message, n.type)"
         @textInput="handleSendMessage"
       />
 
@@ -74,8 +77,17 @@ import { createKernelSession, sendMessage, analyzeIntent } from '../services/int
 import { useAmasSecretary } from '../composables/useAmasSecretary'; 
 import { useAmasAudio } from '../composables/useAmasAudio';
 import { useAmasAudioRecorder } from '../composables/useAmasAudioRecorder';
-import { theme } from '../services/i18n';
 import { AntigravityEngine } from '../engine/antigravity-engine.js';
+import { i18n, theme } from '../services/i18n';
+
+// Helpers for detection
+const detectLanguage = (text) => {
+    const jaPattern = /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\uff66-\uff9f]/;
+    if (jaPattern.test(text)) return 'ja';
+    const koPattern = /[\uac00-\ud7af\u1100-\u11ff\u3130-\u318f\ua960-\ua97f\ud7b0-\ud7ff]/;
+    if (koPattern.test(text)) return 'ko';
+    return 'en'; // Default
+};
 
 // State
 const user = ref(null);
@@ -201,10 +213,23 @@ const handleAnchor = async (id, session) => {
 
 // Messaging logic
 const handleSendMessage = async (text) => {
-  if (text.toLowerCase().includes('@amas')) {
-    activeView.value = 'result';
-    isResultThinking.value = false;
-    return;
+  if (!text) return;
+  console.log(`[Tive◎AI] 📨 Message Received: "${text}"`);
+  
+  // 1. Language Detection & Contextual Sync
+  const detectedLang = detectLanguage(text);
+  if (i18n.locale !== detectedLang) {
+    console.log(`[Tive◎AI] 🌐 Language Shift detected: ${detectedLang}`);
+    i18n.setLocale(detectedLang);
+  }
+
+  // 2. Omotenashi (Hospitality) & Keyword detection
+  const isOmotenashi = text.includes('おもてなし') || text.toLowerCase().includes('hospitality');
+  const isAmas = text.toLowerCase().includes('@amas') || text.includes('アマス') || text.includes('あます');
+
+  if (isOmotenashi || isAmas) {
+    AntigravityEngine.loadAIState({ energyScore: 1.0, color: '#fbcfe8', reactivity: 0.8, type: 'omotenashi' });
+    notify('Omotenashi Mode', 'Hospitality Protocol Activated. Resonating with your heart.', 'success');
   }
 
   messages.value.push({
@@ -213,8 +238,12 @@ const handleSendMessage = async (text) => {
     content: text,
     timestamp: new Date()
   });
+  
+  // 3. Switch to Result View
+  activeView.value = 'result';
+  isResultThinking.value = true;
+  resultContent.value = '';
   isLoading.value = true;
-  if (activeView.value === 'result') isResultThinking.value = true;
 
   try {
     const aiResponse = await sendMessage(kernelSession.value, text);
@@ -228,10 +257,18 @@ const handleSendMessage = async (text) => {
     if (activeView.value === 'result') {
       resultContent.value = aiResponse;
       isResultThinking.value = false;
-      AntigravityEngine.loadAIState({ energyScore: 0.8, color: '#FFD700', reactivity: 1.2 });
+      if (isOmotenashi) {
+          AntigravityEngine.loadAIState({ energyScore: 0.6, color: '#FF8B8B', reactivity: 0.5 });
+      } else {
+          AntigravityEngine.loadAIState({ energyScore: 0.8, color: '#FFD700', reactivity: 1.2 });
+      }
     }
   } catch (error) {
-    console.error('AI Error:', error);
+    console.error('[Tive◎AI] AI Error:', error);
+    if (activeView.value === 'result') {
+      resultContent.value = `[Neural Fragility]: Connection was interrupted. I have your thought: "${text}", but I'm having trouble synthesizing right now.`;
+      isResultThinking.value = false;
+    }
   } finally {
     isLoading.value = false;
   }
@@ -242,19 +279,34 @@ const { stopAll } = useAmasAudio();
 
 const handleToggleVoice = async () => {
     if (isListening.value) {
-        isProcessingVoice.value = true;
-        stopAll();
+        // 1. Set states for processing
         isListening.value = false;
-        const transcript = await stopRecording();
-        isProcessingVoice.value = false;
+        isProcessingVoice.value = true;
         
-        if (transcript) {
-            activeView.value = 'result';
-            isResultThinking.value = true;
-            resultContent.value = '';
-            await handleVoiceTranscription(transcript);
-        } else {
+        // 2. Immediate Transition to Pinkcard (Thinking mode)
+        activeView.value = 'result';
+        isResultThinking.value = true;
+        resultContent.value = '';
+        
+        try {
+            stopAll();
+            const transcript = await stopRecording();
+            isProcessingVoice.value = false;
+            
+            if (transcript) {
+                // handleVoiceTranscription will update resultContent and set isResultThinking to false
+                await handleVoiceTranscription(transcript);
+            } else {
+                notify('Notice', 'No voice detected.', 'info');
+                activeView.value = 'dashboard';
+                isResultThinking.value = false;
+            }
+        } catch (e) {
+            console.error('Voice toggle stop error:', e);
+            notify('Error', 'Processing failed.', 'error');
             activeView.value = 'dashboard';
+            isResultThinking.value = false;
+            isProcessingVoice.value = false;
         }
     } else {
         try {
@@ -268,9 +320,19 @@ const handleToggleVoice = async () => {
 };
 
 const handleVoiceTranscription = async (transcript) => {
+    if (!transcript) return;
+    console.log(`[Tive◎AI] 🎤 Voice Capture: "${transcript}"`);
+
+    // 🌐 Language Sync (Same logic as text input)
+    const detectedLang = detectLanguage(transcript);
+    if (i18n.locale !== detectedLang) {
+        console.log(`[Tive◎AI] 🌐 Language Shift detected from Voice: ${detectedLang}`);
+        i18n.setLocale(detectedLang);
+    }
+
     const amasKeywords = ["amas", "アマス", "あます", "アマスる"];
     if (amasKeywords.some(kw => transcript.toLowerCase().includes(kw))) {
-        activeView.value = 'result';
+        resultContent.value = "Amane Protocol Synchronized. I am here.";
         isResultThinking.value = false;
         return;
     }
@@ -279,9 +341,11 @@ const handleVoiceTranscription = async (transcript) => {
     notebookEntries.value.unshift({ id: processingId, type: 'voice_memo', title: 'Thinking...', content: transcript, timestamp: new Date(), isProcessing: true });
     
     try {
+        // We're already in 'result' view with 'isResultThinking' = true
         const intent = await analyzeIntent(transcript);
         const secretaryEntry = await processSecretaryNote(transcript);
         
+        // Dynamic update of result
         resultContent.value = secretaryEntry.content;
         isResultThinking.value = false;
 
@@ -291,7 +355,9 @@ const handleVoiceTranscription = async (transcript) => {
         AntigravityEngine.loadAIState({ energyScore: 0.5, color: '#FFD700', reactivity: 0.8 });
     } catch (e) {
         console.error('Transcription Error:', e);
-        activeView.value = 'dashboard';
+        // If it fails, we keep the transcript at least in result view but stop thinking
+        resultContent.value = `[Transcribed]: ${transcript}\n\n(Core communication fragile, but I captured your words.)`;
+        isResultThinking.value = false;
     } finally {
         notebookEntries.value = notebookEntries.value.filter(e => e.id !== processingId);
     }

@@ -150,6 +150,17 @@ class SelfImprover:
             return response + "\n(もう少し詳しい説明が必要な場合はお知らせくださいね。)"
         return response
 
+class EmotionDetector:
+    async def detect_async(self, text, llm_func):
+        prompt = f"""発言からユーザーの「情動(Emotion)」を1つ抽出しJSONで出力せよ。
+        選択肢: [joy, anger, sad, neutral, fear, surprise]
+        発言: "{text}"
+        形式: {{"emotion": "選択肢", "intensity": 0.0-1.0}}"""
+        try:
+            res = await llm_func(prompt, json_mode=True)
+            return json.loads(res)
+        except: return {"emotion": "neutral", "intensity": 0.5}
+
 # ==========================================
 # FastAPI サーバー設定 & 超並列パイプライン
 # ==========================================
@@ -175,6 +186,7 @@ introspector = IntrospectionEngine()
 composer = ContextComposer()
 persona = PersonaStabilizer()
 improver = SelfImprover()
+emotion_detector = EmotionDetector()
 
 # Gemini 非同期ラッパー
 async def llm_generate_async(prompt, json_mode=False):
@@ -199,13 +211,13 @@ async def chat_endpoint(request: ChatRequest):
     text = request.text
     
     # --- 🛡️ BROAD LISTENING - INPUT AUDIT ---
-    input_audit = safety_protocol.audit_intent(text)
-    if not input_audit["safe"]:
+    input_audit = await safety_protocol.audit_intent_async(text, llm_generate_async)
+    if not input_audit.get("safe"):
         return {
             "success": False,
             "type": "SAFETY_REFUSAL",
-            "response": input_audit["reason"],
-            "meta": {"violation": input_audit["violation"]}
+            "response": input_audit.get("reason", "I cannot proceed with this request for safety reasons."),
+            "meta": {"violation": input_audit.get("violation")}
         }
 
     # ユーザーごとの記憶空間を初期化
@@ -215,14 +227,17 @@ async def chat_endpoint(request: ChatRequest):
     goal_db = DB_GOALS[user_id]
 
     # --- フェーズ1: 超並列・認知フェーズ ---
-    score_task = asyncio.to_thread(scorer.score, text)
+    emotion_task = emotion_detector.detect_async(text, llm_generate_async)
     intro_task = introspector.reflect_async(request.previous_ai_response, text, llm_generate_async)
     goal_task = goal_tracker.extract_goal_async(text, llm_generate_async)
     semantic_task = semantic_linker.link_async({"content": text}, memory_db)
 
-    score, reflection, extracted_goal, semantic_links = await asyncio.gather(
-        score_task, intro_task, goal_task, semantic_task
+    detected_emotion, reflection, extracted_goal, semantic_links = await asyncio.gather(
+        emotion_task, intro_task, goal_task, semantic_task
     )
+
+    # 感情に基づいて重要度スコアを計算 (同期処理)
+    score = scorer.score(text, emotion=detected_emotion.get("emotion"))
 
     # --- フェーズ2: メモリーグラフ構築フェーズ ---
     node = {
@@ -265,8 +280,8 @@ async def chat_endpoint(request: ChatRequest):
     raw_response = await llm_generate_async(final_prompt)
 
     # --- 🛡️ BROAD LISTENING - RESPONSE AUDIT ---
-    output_audit = safety_protocol.audit_response(raw_response)
-    if not output_audit["safe"]:
+    output_audit = await safety_protocol.audit_response_async(raw_response, llm_generate_async)
+    if not output_audit.get("safe"):
         raw_response = "私は平和と真実の守護者です。生成された回答に倫理的な懸念があったため、ここで内容を修正させていただきます。"
 
     stabilized_response = persona.enforce(raw_response)
@@ -283,6 +298,8 @@ async def chat_endpoint(request: ChatRequest):
         "meta": {
             "introspection": reflection,
             "extracted_goal": extracted_goal,
+            "resonance": score,
+            "emotion": detected_emotion,
             "relations_count": len(node["relations"]),
             "compliance": ["EU-AI-ACT", "GDPR", "GENEVA"]
         }

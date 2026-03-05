@@ -1,16 +1,17 @@
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
-const PYTHON_CORE_URL = import.meta.env.VITE_PYTHON_CORE_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || '';
 
 let lastAiResponse = "";
 
-// Centralized AI intent service routing all requests to the backend
+/**
+ * Tive Intelligence Node Service
+ */
 export const intentService = {
     /**
-     * Tive◎AI Hyper Core Dialogue
+     * Replaces old Python Core chat with Serverless Gemini BFF
      */
     async chatWithCore(text, userId = "user_anchor") {
         try {
-            const response = await fetch(`${PYTHON_CORE_URL}/api/chat`, {
+            const response = await fetch(`${API_BASE_URL}/api/chat`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

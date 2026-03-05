@@ -1,9 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const { GoogleGenerativeAI } = require("@google/generative-ai");
-
-// Initialize Gemini with server-side API Key
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const googleTools = require('../services/googleService');
 
 const INTENT_ROUTER_INSTRUCTION = `Analyze user intent for AIM3/Antigravity. 
 Intents: [CONNECT_VIDEO, MINT_FACT, RECALL_WILL, TODO_TASK, REFLECTION]. 
@@ -115,4 +114,55 @@ router.post('/intent', async (req, res) => {
     }
 });
 
+/**
+ * Tive◎AI Hyper Core Dialogue (Serverless Implementation)
+ * Replaces Python Core for Zero-Server Architecture
+ */
+router.post('/chat', async (req, res) => {
+    const { text, user_id, previous_ai_response, context_memories = [] } = req.body;
+
+    try {
+        // 🧠 Phase 1: Context Composition (Ported from ContextComposer.py)
+        const relevantContext = context_memories
+            .sort((a, b) => (b.importance || 0) - (a.importance || 0))
+            .slice(0, 5)
+            .map(m => m.content)
+            .join("\n");
+
+        const model = genAI.getGenerativeModel({
+            model: "gemini-2.0-flash-exp",
+            tools: googleTools.getTools(),
+            systemInstruction: `You are Tive◎AI, the heart of Amane Protocol. 
+            Directive: Mimamori (Gentle Watching). 
+            Values: Peace, Privacy, Sovereignty.
+            Relevant Context: ${relevantContext}
+            Previous AI Response: ${previous_ai_response || 'None'}
+            User Context: ${user_id}`
+        });
+
+        // Use chat session for multi-turn if needed
+        const chat = model.startChat({
+            history: [],
+            generationConfig: { temperature: 0.7 }
+        });
+
+        const result = await chat.sendMessage(text);
+        const responseText = result.response.text();
+
+        res.json({
+            success: true,
+            response: responseText,
+            meta: {
+                engine: "Antigravity-Serverless",
+                compliance: ["Amane-Protocol-L0"],
+                contextSize: relevantContext.length
+            }
+        });
+    } catch (error) {
+        console.error('Chat Core Error:', error);
+        res.status(500).json({ error: "Intelligence Core temporarily offline" });
+    }
+});
+
 module.exports = router;
+

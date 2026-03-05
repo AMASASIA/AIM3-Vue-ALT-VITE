@@ -61,14 +61,18 @@
 
           <div class="action-stack">
              <input ref="fileInput" type="file" @change="handleFileSelect" style="display: none;">
-             <div class="input-grid">
-                <button class="utility-btn-v" @click="triggerFileUpload" :class="{ 'has-file': selectedFile }">
-                  {{ selectedFile ? '📎 Data Ready' : '📎 Upload' }}
-                </button>
-                <button class="utility-btn-v" :class="{ recording: isRecording }" @click="toggleVoiceInput">
-                  {{ isRecording ? '🎙 Listening...' : '🎙 Voice Input' }}
-                </button>
-             </div>
+              <div v-if="recorderIsRecording" class="orb-overlay animate-fade-in-quick" @click="toggleVoiceInput">
+                <Orb :isListening="recorderIsRecording" />
+                <div class="recording-glow"></div>
+              </div>
+              <div v-else class="input-grid">
+                 <button class="utility-btn-v" @click="triggerFileUpload" :class="{ 'has-file': selectedFile }">
+                   {{ selectedFile ? '📎 Data Ready' : '📎 Upload' }}
+                 </button>
+                 <button class="utility-btn-v" :class="{ recording: recorderIsRecording }" @click="toggleVoiceInput">
+                   {{ recorderIsRecording ? '🎙 Listening...' : '🎙 Voice Input' }}
+                 </button>
+              </div>
 
              <div class="mint-execution-area">
                 <button class="mint-button-solid" @click="executeAtomicMint" :disabled="minting">
@@ -151,32 +155,23 @@
       <!-- SUCCESS MODAL: The Final Crystallization -->
       <div v-if="showSuccess" class="success-overlay-sacred" @click="showSuccess = false">
          <div class="celebration-orb-bg"></div>
-         <div class="success-card-organic animate-pop">
-            <div class="success-visual">
-               <img v-if="lastMinted?.image" :src="lastMinted.image" class="final-result-img" />
-               <div class="success-glow-sweep"></div>
-            </div>
-            <div class="success-info-sacred">
-               <span class="status-badge-sacred">CRYSTALLIZED SUCCESS</span>
-               <h2 class="success-title">{{ lastMinted?.name }}</h2>
-               <div class="proof-row-sacred">
-                  <span class="proof-label">ATOMIC_HASH</span>
-                  <code class="proof-value">{{ lastMinted?.tx?.substring(0,24) }}...</code>
+         <div class="success-nexus animate-pop" @click.stop>
+            <!-- Pinkcard Reveal -->
+            <AmaneCertificationCard :fact="{
+                model: lastMinted?.name || 'Atomic Crystal',
+                grade: lastMinted?.resonanceScore || (8.5 + Math.random()*1.5).toFixed(1),
+                category: lastMinted?.label || 'NEURAL_CRYSTAL',
+                description: lastMinted?.artifactData?.markdown || 'This observation has been successfully crystallized into the OKE protocol.',
+                observer: lastMinted?.observer || 'OS-001_SENSORY',
+                shortId: lastMinted?.tx?.substring(0,8)
+            }" />
+            
+            <div class="success-controls-sacred mt-4">
+               <div class="feedback-nexus-horizontal">
+                  <button @click.stop="handleFeedback(true)" class="f-btn-h up">Resonant</button>
+                  <button @click.stop="handleFeedback(false)" class="f-btn-h down">Discordant</button>
                </div>
-               <div class="feedback-nexus">
-                  <span class="feedback-label">Neural Resonance</span>
-                  <div class="feedback-actions">
-                     <button @click.stop="handleFeedback(true)" class="feedback-btn up">
-                        <ThumbsUp :size="16" />
-                        <span>Resonant</span>
-                     </button>
-                     <button @click.stop="handleFeedback(false)" class="feedback-btn down">
-                        <ThumbsDown :size="16" />
-                        <span>Discordant</span>
-                     </button>
-                  </div>
-               </div>
-               <button class="continue-btn-sacred" @click="showSuccess = false">Acknowledge</button>
+               <button class="continue-btn-sacred-wide mt-4" @click="showSuccess = false">Acknowledge</button>
             </div>
          </div>
       </div>
@@ -187,11 +182,19 @@
            <div class="pulsing-sphere"></div>
            <div class="asseting-text">CRYSTALLISING...</div>
            <div class="log-stream">
-              <p>Binding Atomic structure...</p>
-              <p>Encoding 432Hz Sound Wave...</p>
-              <p>Sealing with OKE Identity...</p>
+              <p>Extracting Neural Resonance...</p>
+              <p>Spectral Masking Applied (Privacy Shield)...</p>
+              <p>Binding to Atomic SBT Structure...</p>
+              <p>Sealing with OKE Identity: {{ identity }}</p>
            </div>
         </div>
+      </div>
+
+      <!-- VOICE TRANSCRIPT PREVIEW -->
+      <div v-if="voiceTranscript && !minting" class="transcript-preview animate-fade-in-quick">
+          <div class="preview-label">Neural Capture:</div>
+          <div class="preview-text">"{{ voiceTranscript }}"</div>
+          <button class="clear-transcript" @click="voiceTranscript = ''">×</button>
       </div>
 
     </div>
@@ -202,8 +205,13 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 import { Share2, Lock, Unlock, Check, Share, X, Zap, Boxes, History, Camera, Mic, Activity, Trash2, Shield, Heart, Sparkles, ThumbsUp, ThumbsDown } from 'lucide-vue-next';
 import { executeAtomicMint as okeAtomicMint, subscribeToCards } from '../services/okeService';
+import { voiceFeatureService } from '../services/voiceFeatureService';
+import { recordFeedback } from '../services/intentService';
 import UniverseGenerator from './UniverseGenerator.vue';
+import Orb from './Orb.vue';
+import AmaneCertificationCard from './AmaneCertificationCard.vue';
 import { marked } from 'marked';
+import { useAmasAudioRecorder } from '../composables/useAmasAudioRecorder';
 
 // State
 const viewState = ref('login');
@@ -221,7 +229,6 @@ const universeGen = ref(null);
 const abstractionLevel = ref(0.6);
 const fileInput = ref(null);
 const selectedFile = ref(null);
-const isRecording = ref(false);
 const walletAddress = ref('');
 const voiceTranscript = ref(''); // Capture voice input for crystallization
 
@@ -235,7 +242,7 @@ const playBell = () => {
 };
 
 // --- BREAKWATER ARCHITECTURE: SLIM FRONTEND ---
-const { startRecording, stopRecording, lastAudioBlob, isRecording, isUploading } = useAmasAudioRecorder();
+const { startRecording, stopRecording, lastAudioBlob, isRecording: recorderIsRecording, isUploading } = useAmasAudioRecorder();
 
 const handleLogin = async () => {
   viewState.value = 'app';
@@ -289,7 +296,7 @@ const handleFileSelect = (e) => {
 };
 
 const toggleVoiceInput = async () => {
-    if (isRecording.value) {
+    if (recorderIsRecording.value) {
         const transcript = await stopRecording();
         if (transcript) voiceTranscript.value = transcript;
         if (universeGen.value) universeGen.value.toggleAudio();
@@ -448,9 +455,26 @@ onUnmounted(() => { if (unsubscribeCards) unsubscribeCards(); });
 .continue-btn-sacred { width: 100%; background: #FFD700; color: #000; border: none; padding: 15px; border-radius: 15px; font-weight: 700; cursor: pointer; transition: 0.3s; }
 .continue-btn-sacred:hover { box-shadow: 0 10px 30px rgba(255,215,0,0.3); transform: translateY(-3px); }
 
-/* ANIMATIONS */
-.animate-pop { animation: pop 0.5s cubic-bezier(0.17, 0.67, 0.83, 0.67); }
-@keyframes pop { from { scale: 0.8; opacity: 0; } to { scale: 1; opacity: 1; } }
+.orb-overlay { position: relative; width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; transform: scale(0.6); margin: -40px 0; cursor: pointer; }
+.recording-glow { position: absolute; inset: 20%; background: radial-gradient(circle, rgba(255,139,139,0.15) 0%, transparent 70%); filter: blur(30px); animation: pulse 2s infinite; }
+
+.success-nexus { position: relative; z-index: 10; display: flex; flex-direction: column; align-items: center; }
+.feedback-nexus-horizontal { display: flex; gap: 10px; width: 100%; }
+.f-btn-h { flex: 1; padding: 12px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.05); background: rgba(255,255,255,0.03); color: #888; font-size: 0.7rem; font-weight: 700; transition: 0.3s; }
+.f-btn-h.up:hover { background: rgba(74, 222, 128, 0.1); color: #4ade80; border-color: rgba(74, 222, 128, 0.3); }
+.f-btn-h.down:hover { background: rgba(244, 63, 94, 0.1); color: #f43f5e; border-color: rgba(244, 63, 94, 0.3); }
+
+.continue-btn-sacred-wide { width: 100%; background: #fff; color: #000; border: none; padding: 18px; border-radius: 20px; font-weight: 900; letter-spacing: 2px; text-transform: uppercase; font-size: 0.7rem; cursor: pointer; transition: 0.3s; }
+.continue-btn-sacred-wide:hover { box-shadow: 0 0 30px rgba(255,255,255,0.2); transform: translateY(-3px); }
+
+.transcript-preview {
+    position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%);
+    width: 90%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,139,139,0.2);
+    border-radius: 20px; padding: 20px; backdrop-filter: blur(20px); z-index: 100;
+}
+.preview-label { font-size: 0.6rem; color: #FF8B8B; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 5px; }
+.preview-text { font-family: 'Outfit'; font-size: 0.9rem; color: #fff; font-style: italic; }
+.clear-transcript { position: absolute; top: 10px; right: 10px; background: none; border: none; color: #888; font-size: 1.2rem; cursor: pointer; }
 
 .custom-scroll::-webkit-scrollbar { width: 4px; }
 .custom-scroll::-webkit-scrollbar-thumb { background: rgba(255,139,139,0.2); border-radius: 10px; }

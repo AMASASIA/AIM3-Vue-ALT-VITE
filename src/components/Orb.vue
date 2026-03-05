@@ -1,5 +1,6 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue';
+import { Square } from 'lucide-vue-next';
 
 const props = defineProps({
   isListening: Boolean,
@@ -50,6 +51,10 @@ onUnmounted(() => cancelAnimationFrame(animationFrame));
                 opacity: 0.3 + (bar.h / 80)
             }"
           ></div>
+          <!-- Subtle Stop Icon -->
+          <div class="stop-icon-overlay">
+            <Square :size="24" fill="currentColor" />
+          </div>
       </div>
 
       <!-- Living Center Dot -->
@@ -99,49 +104,63 @@ onUnmounted(() => cancelAnimationFrame(animationFrame));
   position: relative;
   width: 240px;
   height: 240px;
-  background: radial-gradient(circle at 40% 40%, rgba(30, 20, 20, 0.8) 0%, #000 100%);
+  background: #000;
   border-radius: 50%;
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 0 40px rgba(255, 255, 255, 0.05);
 }
 
 .visualizer-shards { display: flex; align-items: center; gap: 4px; z-index: 10; }
 .soul-shard {
     width: 6px;
-    background: linear-gradient(to bottom, #FF8B8B, #FFD700);
+    background: #fff;
     border-radius: 100px;
-    box-shadow: 0 0 20px rgba(255, 139, 139, 0.4);
+    box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
 }
 
-.heart-dot { position: relative; width: 14px; height: 14px; z-index: 20; }
-.dot-core { position: absolute; inset: 0; background: #FFD700; border-radius: 50%; box-shadow: 0 0 15px #FFD700; z-index: 2; }
+.stop-icon-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    opacity: 0.15;
+    pointer-events: none;
+    z-index: 20;
+    transition: opacity 0.3s;
+}
+.orb-container:hover .stop-icon-overlay { opacity: 0.4; }
+
+.heart-dot { position: relative; width: 12px; height: 12px; z-index: 20; }
+.dot-core { position: absolute; inset: 0; background: #fff; border-radius: 50%; box-shadow: 0 0 20px #fff; z-index: 2; }
 .dot-pulse { 
-    position: absolute; inset: -4px; border: 1px solid #FF8B8B; border-radius: 50%; 
-    animation: ping-sacred 2s infinite cubic-bezier(0, 0, 0.2, 1); 
+    position: absolute; inset: -4px; border: 1px solid rgba(255, 255, 255, 0.5); border-radius: 50%; 
+    animation: ping-sacred 3s infinite cubic-bezier(0, 0, 0.2, 1); 
 }
 
-@keyframes ping-sacred { 0% { transform: scale(1); opacity: 1; } 100% { transform: scale(3.5); opacity: 0; } }
+@keyframes ping-sacred { 0% { transform: scale(1); opacity: 0.8; } 100% { transform: scale(4); opacity: 0; } }
 
-.mist-layer { position: absolute; inset: -50%; filter: blur(60px); opacity: 0.2; }
-.rose-glow { background: radial-gradient(circle, #FF8B8B 0%, transparent 60%); animation: drift 15s infinite linear; }
-.gold-glow { background: radial-gradient(circle, #FFD700 0%, transparent 60%); animation: drift 20s infinite linear reverse; }
+.mist-layer { position: absolute; inset: -50%; filter: blur(60px); opacity: 0.1; }
+.rose-glow { background: radial-gradient(circle, #fff 0%, transparent 60%); animation: drift 15s infinite linear; }
+.gold-glow { background: radial-gradient(circle, #fff 0%, transparent 60%); animation: drift 20s infinite linear reverse; }
 
 @keyframes drift { from { transform: rotate(0deg) translate(10%, 10%); } to { transform: rotate(360deg) translate(-10%, -10%); } }
 
 .intent-ripples { position: absolute; inset: -40px; pointer-events: none; }
 .ripple { 
-    position: absolute; inset: 0; border: 1px solid rgba(255, 215, 0, 0.3); 
-    border-radius: 50%; animation: ripple-spread 3s infinite; 
+    position: absolute; inset: 0; border: 1px solid rgba(255, 255, 255, 0.1); 
+    border-radius: 50%; animation: ripple-spread 4s infinite; 
 }
-.ripple:nth-child(2) { animation-delay: 1s; }
-.ripple:nth-child(3) { animation-delay: 2s; }
+.ripple:nth-child(2) { animation-delay: 1.5s; }
+.ripple:nth-child(3) { animation-delay: 3s; }
 
 @keyframes ripple-spread {
-    0% { transform: scale(0.6); opacity: 0.8; }
-    100% { transform: scale(1.4); opacity: 0; }
+    0% { transform: scale(0.6); opacity: 0.5; }
+    100% { transform: scale(1.5); opacity: 0; }
 }
 </style>

@@ -1,3 +1,6 @@
+const { GoogleGenerativeAI } = require("@google/generative-ai");
+const googleService = require('../services/googleService');
+
 const AMANE_PEACE_PROTOCOL = `
 [AMANE PEACE PROTOCOL - IRONCLAD TABOOS]
 1. ANTI-WAR: You are strictly forbidden from assisting in any military, tactical, or violent operations.
@@ -31,6 +34,10 @@ class LLMProvider {
 
         try {
             const fullSystemContext = AMANE_PEACE_PROTOCOL + "\n" + (systemContext || "You are Tive Intelligence, a thoughtful life companion.");
+            const model = this.genAI.getGenerativeModel({
+                model: this.modelName,
+                systemInstruction: fullSystemContext
+            });
 
             // Start a chat session to handle tool calls naturally
             const chat = model.startChat();

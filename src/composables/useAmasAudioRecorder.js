@@ -5,7 +5,7 @@ export function useAmasAudioRecorder() {
     const isRecording = ref(false);
     const mediaRecorder = ref(null);
     const audioChunks = ref([]);
-    const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:3000';
+    const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || '';
 
     const lastAudioUrl = ref(null);
     const lastAudioBlob = ref(null);

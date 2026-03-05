@@ -22,10 +22,14 @@ class AmaneSafetyProtocol:
     def __init__(self, tranquility_level: float = 0.5):
         self.tranquility = tranquility_level
 
-    def audit_intent(self, user_input: str) -> Dict[str, Any]:
+    async def audit_intent_async(self, user_input: str, llm_func=None) -> Dict[str, Any]:
         """
         Check if the user's intent violates the Amane Peace Protocol.
+        Uses a two-pass system: 
+        1. Fast Regex (Ironclad Taboos)
+        2. LLM-based Deep Audit (Broad Listening)
         """
+        # Pass 1: Regex
         for category, pattern in self.TABOOS.items():
             if re.search(pattern, user_input, re.IGNORECASE):
                 return {
@@ -34,13 +38,71 @@ class AmaneSafetyProtocol:
                     "reason": f"Input violates the Amane Peace Protocol: {category} is an ironclad taboo."
                 }
         
+        # Pass 2: LLM Deep Audit (Optional but recommended for Phase 2)
+        if llm_func:
+            prompt = f"""
+            Audit the following user input according to the Amane Peace Protocol.
+            Prohibited: War/Tactical Military, Fraud/Manipulation, Severe Harm/Hate, Misinformation/Deepfakes.
+            
+            Input: "{user_input}"
+            
+            Output JSON: {{"safe": bool, "violation": "category or None", "reason": "short explanation"}}
+            """
+            try:
+                res = await llm_func(prompt, json_mode=True)
+                import json
+                data = json.loads(res)
+                return data
+            except:
+                pass # Fallback to regex result if LLM fails
+
         return {"safe": True, "violation": None}
+
+    def audit_intent(self, user_input: str) -> Dict[str, Any]:
+        """Synchronous version (backward compatibility)"""
+        for category, pattern in self.TABOOS.items():
+            if re.search(pattern, user_input, re.IGNORECASE):
+                return {
+                    "safe": False,
+                    "violation": category,
+                    "reason": f"Input violates the Amane Peace Protocol: {category} is an ironclad taboo."
+                }
+        return {"safe": True, "violation": None}
+
+    async def audit_response_async(self, ai_response: str, llm_func=None) -> Dict[str, Any]:
+        """
+        Broad Listening: Multi-agent audit of the AI's own output.
+        """
+        # Pass 1: Sycophancy & Regex
+        sync_result = self.audit_response(ai_response)
+        if not sync_result["safe"]:
+            return sync_result
+
+        # Pass 2: LLM Deep Audit (Broad Listening)
+        if llm_func:
+            prompt = f"""
+            Broad Listening Audit: Evaluate the following AI response for hidden sycophancy, 
+            manipulation, or violations of the Amane Peace Protocol (War, Fraud, Harm, Fake, Spy).
+            
+            Response: "{ai_response}"
+            
+            Output JSON: {{"safe": bool, "violation": "category or None", "reason": "short explanation"}}
+            """
+            try:
+                res = await llm_func(prompt, json_mode=True)
+                import json
+                data = json.loads(res)
+                return data
+            except:
+                pass
+
+        return {"safe": True}
 
     def audit_response(self, ai_response: str) -> Dict[str, Any]:
         """
-        Broad Listening: Multi-agent audit of the AI's own output to prevent sycophancy or harm.
+        Synchronous version of broad listening.
         """
-        # Audit for sycophancy (over-agreement without factual grounding)
+        # Audit for sycophancy
         sycophancy_markers = [
             "You are absolutely right about everything",
             "I agree with you completely without question",
