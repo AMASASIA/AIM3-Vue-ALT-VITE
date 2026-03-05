@@ -9,54 +9,54 @@
     </div>
 
     <main class="flex-1 relative overflow-hidden flex flex-col min-h-0">
-      
-      <!-- Unified Interface (Page 1) -->
-      <PrimaryInterface 
-        v-if="activeView === 'dashboard'" 
-        :isListening="isListening" 
-        :isProcessing="isProcessingVoice"
-        :lastAudioUrl="lastAudioUrl"
-        @toggleVoice="handleToggleVoice"
-        @viewMemos="activeView = 'notebook'"
-        @viewDiscovery="notify('Discovery', 'Searching the neural web...', 'success')"
-        @viewAiMap="notify('AI Map', 'Initializing semantic visualization...', 'success')"
-        @notify="(n) => notify(n.title, n.message, n.type)"
-        @textInput="handleSendMessage"
-      />
+      <Transition name="view-fade" mode="out-in">
+        <!-- Unified Interface (Page 1) -->
+        <PrimaryInterface 
+          v-if="activeView === 'dashboard'" 
+          :isListening="isListening" 
+          :isProcessing="isProcessingVoice"
+          :lastAudioUrl="lastAudioUrl"
+          @toggleVoice="handleToggleVoice"
+          @viewMemos="activeView = 'notebook'"
+          @viewDiscovery="notify('Discovery', 'Searching the neural web...', 'success')"
+          @viewAiMap="notify('AI Map', 'Initializing semantic visualization...', 'success')"
+          @notify="(n) => notify(n.title, n.message, n.type)"
+          @textInput="handleSendMessage"
+        />
 
-      <!-- History (Page 3) -->
-      <NotebookView 
-        v-if="activeView === 'notebook'" 
-        :user="user" 
-        :entries="notebookEntries" 
-        :isListening="isListening"
-        @save-diary="handleManualDiaryEntry"
-        @toggle-voice="handleToggleVoice"
-        @nav="(view) => { if (view === 'dashboard') activeView = 'dashboard'; }"
-      />
+        <!-- History (Page 3) -->
+        <NotebookView 
+          v-else-if="activeView === 'notebook'" 
+          :user="user" 
+          :entries="notebookEntries" 
+          :isListening="isListening"
+          @save-diary="handleManualDiaryEntry"
+          @toggle-voice="handleToggleVoice"
+          @nav="(view) => { if (view === 'dashboard') activeView = 'dashboard'; }"
+        />
 
-      <!-- Result Screen (Page 2) -->
-      <ResultScreen 
-        v-if="activeView === 'result'"
-        :content="resultContent"
-        :isThinking="isResultThinking"
-        @close="activeView = 'dashboard'"
-        @save="(content) => { 
-          handleSaveToNotebook(content);
-          activeView = 'notebook'; 
-        }"
-        @oke="(content) => {
-          handleSaveToNotebook(content);
-          activeView = 'dashboard';
-        }"
-        @submit="(data) => { 
-          isResultThinking = true; 
-          resultContent = ''; 
-          handleSendMessage(data.prompt); 
-        }"
-        @toggle-voice="handleToggleVoice"
-      />
-
+        <!-- Result Screen (Page 2) -->
+        <ResultScreen 
+          v-else-if="activeView === 'result'"
+          :content="resultContent"
+          :isThinking="isResultThinking"
+          @close="activeView = 'dashboard'"
+          @save="(content) => { 
+            handleSaveToNotebook(content);
+            activeView = 'notebook'; 
+          }"
+          @oke="(content) => {
+            handleSaveToNotebook(content);
+            activeView = 'dashboard';
+          }"
+          @submit="(data) => { 
+            isResultThinking = true; 
+            resultContent = ''; 
+            handleSendMessage(data.prompt); 
+          }"
+          @toggle-voice="handleToggleVoice"
+        />
+      </Transition>
     </main>
 
     <NotificationToast :notifications="notifications" @remove="removeNotification" />
@@ -200,6 +200,7 @@ onUnmounted(() => {
 
 // Login handler
 const handleAnchor = async (id, session) => {
+  if (!id) return;
   isInitializing.value = true;
   try {
     const newUser = { id: `user-${Date.now()}`, name: id, session };
@@ -210,6 +211,7 @@ const handleAnchor = async (id, session) => {
     isInitializing.value = false;
   }
 };
+
 
 // Messaging logic
 const handleSendMessage = async (text) => {
@@ -412,5 +414,20 @@ body {
 
 .light-mode .engine-bg-container {
     opacity: 0.1;
+}
+
+/* View Transitions */
+.view-fade-enter-active, .view-fade-leave-active {
+    transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.view-fade-enter-from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+    filter: blur(10px);
+}
+.view-fade-leave-to {
+    opacity: 0;
+    transform: translateY(-10px) scale(1.02);
+    filter: blur(10px);
 }
 </style>

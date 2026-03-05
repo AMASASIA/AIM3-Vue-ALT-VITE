@@ -129,12 +129,20 @@ onUnmounted(() => cancelAnimationFrame(animationFrame));
     align-items: center;
     justify-content: center;
     color: #fff;
-    opacity: 0.15;
+    opacity: 0.3;
     pointer-events: none;
     z-index: 20;
-    transition: opacity 0.3s;
+    transition: all 0.5s ease-in-out;
 }
-.orb-container:hover .stop-icon-overlay { opacity: 0.4; }
+.is-listening .stop-icon-overlay {
+    opacity: 0.6;
+    animation: stop-pulse 2s infinite alternate;
+}
+@keyframes stop-pulse {
+    from { transform: scale(0.95); opacity: 0.4; }
+    to { transform: scale(1.05); opacity: 0.8; }
+}
+.orb-container:hover .stop-icon-overlay { opacity: 1; transform: scale(1.1); }
 
 .heart-dot { position: relative; width: 12px; height: 12px; z-index: 20; }
 .dot-core { position: absolute; inset: 0; background: #fff; border-radius: 50%; box-shadow: 0 0 20px #fff; z-index: 2; }

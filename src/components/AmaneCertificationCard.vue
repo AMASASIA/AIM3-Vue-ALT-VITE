@@ -89,7 +89,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
 
@@ -107,6 +107,9 @@ const props = defineProps({
   }
 });
 
+const displayDescription = ref('');
+const isTyping = ref(false);
+
 const displayDate = computed(() => {
     const d = new Date();
     const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
@@ -114,10 +117,31 @@ const displayDate = computed(() => {
 });
 
 const renderedDescription = computed(() => {
-    if (!props.fact.description) return '';
-    const rawHtml = marked.parse(props.fact.description);
+    if (!displayDescription.value) return '';
+    const rawHtml = marked.parse(displayDescription.value);
     return DOMPurify.sanitize(rawHtml);
 });
+
+const typeText = async (text) => {
+    isTyping.value = true;
+    displayDescription.value = '';
+    const chars = text.split('');
+    let current = '';
+    
+    // Type in chunks for better performance and rhythm
+    for (let i = 0; i < chars.length; i++) {
+        current += chars[i];
+        displayDescription.value = current;
+        // Faster typing for longer texts
+        const speed = chars.length > 200 ? 5 : 15;
+        await new Promise(r => setTimeout(r, speed));
+    }
+    isTyping.value = false;
+};
+
+watch(() => props.fact.description, (newVal) => {
+    if (newVal) typeText(newVal);
+}, { immediate: true });
 </script>
 
 <style scoped>
@@ -131,11 +155,19 @@ const renderedDescription = computed(() => {
   box-shadow: 
     0 40px 100px -20px rgba(0, 0, 0, 0.4),
     inset 0 0 40px rgba(255, 255, 255, 0.5);
-  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: holo-shimmer 8s infinite alternate ease-in-out;
+}
+
+@keyframes holo-shimmer {
+    0% { filter: hue-rotate(0deg) brightness(1); }
+    50% { filter: hue-rotate(5deg) brightness(1.02); box-shadow: 0 40px 100px -20px rgba(255, 139, 139, 0.2), inset 0 0 40px rgba(255, 255, 255, 0.6); }
+    100% { filter: hue-rotate(-5deg) brightness(1); }
 }
 
 .oke-card:hover {
     transform: translateY(-5px) scale(1.01);
+    filter: brightness(1.05);
 }
 
 @keyframes pulse-slow {

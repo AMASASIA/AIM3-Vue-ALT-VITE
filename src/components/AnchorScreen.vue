@@ -1,16 +1,39 @@
 <script setup>
 import { ref } from 'vue';
 import { Mail } from 'lucide-vue-next';
+import { signInWithPopup } from 'firebase/auth';
+import { auth, googleProvider } from '../firebase';
 
 const props = defineProps({
   isLoading: Boolean
 });
 
 const emit = defineEmits(['anchor']);
+const isProcessing = ref(false);
+const loginError = ref('');
 
-const handleGoogleLogin = () => {
-    // Simulate Google Login for AIM-IAM
-    emit('anchor', 'google_user', 'google_session');
+const handleGoogleLogin = async () => {
+    if (isProcessing.value) return;
+    
+    isProcessing.value = true;
+    loginError.value = '';
+    
+    try {
+        console.log("[Tive◎AI] 🛡️ Initializing Amane Anchor Protocol...");
+        const result = await signInWithPopup(auth, googleProvider);
+        const user = result.user;
+        
+        console.log("[Tive◎AI] ✅ Resonance Established:", user.displayName);
+        emit('anchor', user.displayName, user.uid);
+    } catch (error) {
+        console.error("[Tive◎AI] ⚠️ Anchor Protocol Interrupted:", error);
+        loginError.value = error.code === 'auth/popup-closed-by-user' 
+            ? 'Login cancelled. Please try again.' 
+            : 'Resonance failed. Check connection or popup blocker.';
+        emit('anchor', null, null); 
+    } finally {
+        isProcessing.value = false;
+    }
 };
 </script>
 
@@ -24,7 +47,7 @@ const handleGoogleLogin = () => {
       <!-- Minimalist Google Button -->
       <button 
         @click="handleGoogleLogin"
-        :disabled="isLoading"
+        :disabled="isLoading || isProcessing"
         class="group relative w-full flex items-center justify-center gap-4 py-5 px-8 bg-zinc-900/50 backdrop-blur-xl border border-white/5 rounded-2xl shadow-2xl hover:bg-zinc-800 transition-all active:scale-[0.98] disabled:opacity-50"
       >
         <div class="w-5 h-5 flex items-center justify-center">
@@ -37,14 +60,17 @@ const handleGoogleLogin = () => {
         </div>
         <span class="text-sm font-medium tracking-tight text-white/90">Continue with Google</span>
         
-        <div v-if="isLoading" class="absolute inset-0 bg-black/80 flex items-center justify-center rounded-2xl">
+        <div v-if="isLoading || isProcessing" class="absolute inset-0 bg-black/80 flex items-center justify-center rounded-2xl">
             <div class="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin"></div>
         </div>
       </button>
 
+      <p v-if="loginError" class="mt-4 text-xs text-red-400/80 animate-pulse">{{ loginError }}</p>
+
     </div>
   </div>
 </template>
+
 
 <style scoped>
 .bg-radial-gradient {

@@ -93,6 +93,15 @@ const handlePromptSubmit = () => {
     promptInput.value = '';
 };
 
+// --- TACTILE FEEDBACK ---
+const playBell = () => {
+    try {
+        const bell = new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3');
+        bell.volume = 0.3;
+        bell.play();
+    } catch(e) { console.warn('Audio feedback failed'); }
+};
+
 // --- OKE / ZKP FLOW ---
 const handleAmaneMint = async (target) => {
     if (processingState.value !== 'idle') return;
@@ -124,6 +133,7 @@ const handleAmaneMint = async (target) => {
         console.log("Amane Flow Success (Backend):", data);
 
         processingState.value = 'completed';
+        playBell();
         if (target === 'save') emit('save', props.content);
         else emit('oke', props.content);
         
