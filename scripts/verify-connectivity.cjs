@@ -8,12 +8,15 @@ const PORTS = [
 
 async function checkPort({ name, port, path }) {
     return new Promise((resolve) => {
+        let finished = false;
         const req = http.get({
             hostname: 'localhost',
             port: port,
             path: path,
             timeout: 2000
         }, (res) => {
+            if (finished) return;
+            finished = true;
             if (res.statusCode === 200) {
                 console.log(`✅ ${name} (Port ${port}): ONLINE`);
                 resolve(true);
@@ -24,11 +27,15 @@ async function checkPort({ name, port, path }) {
         });
 
         req.on('error', (err) => {
+            if (finished) return;
+            finished = true;
             console.log(`❌ ${name} (Port ${port}): OFFLINE (${err.code})`);
             resolve(false);
         });
 
         req.on('timeout', () => {
+            if (finished) return;
+            finished = true;
             req.destroy();
             console.log(`❌ ${name} (Port ${port}): TIMEOUT`);
             resolve(false);
