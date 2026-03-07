@@ -28,3 +28,12 @@ build_*.txt
 build_output.txt
 diff_main.txt
 __pycache__/
+
+# Temporary session data and results
+auth_code.txt
+supabase_auth.txt
+result.txt
+result_check.txt
+out.txt
+build_log.txt
+*.bak
